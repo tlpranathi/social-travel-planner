@@ -47,11 +47,22 @@ CREATE INDEX preference_user_idx ON user_preference(user_id);
 CREATE OR REPLACE VIEW vote_summary_view AS
 SELECT trip_id, attraction_id, SUM(vote_value)::int AS vote_score, COUNT(*)::int AS vote_count FROM vote GROUP BY trip_id, attraction_id;
 CREATE OR REPLACE VIEW trip_dashboard_view AS
-SELECT t.trip_id,t.trip_name,t.start_date,t.end_date,t.budget,d.name AS destination_name,d.country,
-  COUNT(DISTINCT tm.user_id)::int AS member_count,COALESCE(SUM(DISTINCT e.amount),0) AS total_expense,
-  CONCAT(COALESCE(w.temperature::text,'?'),' C, ',COALESCE(w.weather_code,'No forecast')) AS weather_summary
-FROM trip t JOIN destination d ON d.destination_id=t.destination_id LEFT JOIN trip_member tm ON tm.trip_id=t.trip_id LEFT JOIN trip_expense e ON e.trip_id=t.trip_id LEFT JOIN weather_snapshot w ON w.destination_id=d.destination_id AND w.forecast_date=t.start_date
-GROUP BY t.trip_id,d.name,d.country,w.temperature,w.weather_code;
+SELECT
+  t.trip_id,
+  t.trip_name,
+  t.start_date,
+  t.end_date,
+  t.budget,
+  d.name AS destination_name,
+  d.country,
+  (SELECT COUNT(*)::int FROM trip_member tm WHERE tm.trip_id = t.trip_id) AS member_count,
+  COALESCE((SELECT SUM(e.amount) FROM trip_expense e WHERE e.trip_id = t.trip_id), 0) AS total_expense,
+  CONCAT(COALESCE(w.temperature::text, '?'), ' C, ', COALESCE(w.weather_code, 'No forecast')) AS weather_summary
+FROM trip t
+JOIN destination d ON d.destination_id = t.destination_id
+LEFT JOIN weather_snapshot w
+  ON w.destination_id = d.destination_id
+ AND w.forecast_date = t.start_date;
 
 -- FUNCTIONS + TRIGGER
 
