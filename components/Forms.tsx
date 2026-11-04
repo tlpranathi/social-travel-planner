@@ -1,0 +1,5 @@
+"use client";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+export function ApiForm({endpoint,children}:{endpoint:string;children:React.ReactNode}){const router=useRouter();const [msg,setMsg]=useState("");return <form className="controls" onSubmit={async e=>{e.preventDefault();const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});const body=await r.json();setMsg(r.ok?"Saved":body.error||"Could not save");if(r.ok){e.currentTarget.reset();router.refresh()}}}>{children}<button>Save</button>{msg&&<small>{msg}</small>}</form>}
+export function VoteButton({attractionId,tripId}:{attractionId:number;tripId:number}){const router=useRouter();return <button onClick={async()=>{const r=await fetch("/api/votes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({attractionId,tripId,value:1})}); if(!r.ok) alert((await r.json()).error); router.refresh()}}>Vote +</button>}
