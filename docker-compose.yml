@@ -1,0 +1,16 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: social-travel-db
+    environment:
+      POSTGRES_DB: social_travel
+      POSTGRES_USER: travel_user
+      POSTGRES_PASSWORD: travel_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+volumes:
+  postgres_data:
