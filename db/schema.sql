@@ -1,6 +1,8 @@
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+-- TABLES:
+
 CREATE TABLE app_user (
   user_id SERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL, email VARCHAR(150) UNIQUE NOT NULL,
   password_hash TEXT NOT NULL DEFAULT 'demo-not-for-production', role VARCHAR(20) NOT NULL CHECK (role IN ('ORGANIZER','MEMBER','ADMIN')), created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -31,11 +33,16 @@ CREATE TABLE trip_invitation (invitation_id SERIAL PRIMARY KEY, trip_id INT NOT 
 CREATE TABLE user_session (session_token UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id INT NOT NULL REFERENCES app_user(user_id) ON DELETE CASCADE, expires_at TIMESTAMPTZ NOT NULL DEFAULT now() + interval '7 days');
 CREATE TABLE attraction_hours (hours_id SERIAL PRIMARY KEY, attraction_id INT NOT NULL REFERENCES attraction(attraction_id) ON DELETE CASCADE, day_of_week SMALLINT NOT NULL CHECK(day_of_week BETWEEN 0 AND 6), open_time TIME NOT NULL, close_time TIME NOT NULL, CHECK(close_time>open_time), UNIQUE(attraction_id,day_of_week));
 
+-- INDEXES:
+
 CREATE INDEX attraction_destination_category_idx ON attraction(destination_id, category_id);
 CREATE INDEX vote_trip_attraction_idx ON vote(trip_id, attraction_id);
-CREATE INDEX attraction_embedding_idx ON attraction USING ivfflat (embedding vector_l2_ops) WITH (lists = 10);
+-- One list suits the deliberately small classroom seed catalogue.
+CREATE INDEX attraction_embedding_idx ON attraction USING ivfflat (embedding vector_l2_ops) WITH (lists = 1);
 CREATE INDEX session_token_idx ON user_session(session_token);
 CREATE INDEX preference_user_idx ON user_preference(user_id);
+
+-- VIEWS:
 
 CREATE OR REPLACE VIEW vote_summary_view AS
 SELECT trip_id, attraction_id, SUM(vote_value)::int AS vote_score, COUNT(*)::int AS vote_count FROM vote GROUP BY trip_id, attraction_id;
@@ -45,6 +52,8 @@ SELECT t.trip_id,t.trip_name,t.start_date,t.end_date,t.budget,d.name AS destinat
   CONCAT(COALESCE(w.temperature::text,'?'),' C, ',COALESCE(w.weather_code,'No forecast')) AS weather_summary
 FROM trip t JOIN destination d ON d.destination_id=t.destination_id LEFT JOIN trip_member tm ON tm.trip_id=t.trip_id LEFT JOIN trip_expense e ON e.trip_id=t.trip_id LEFT JOIN weather_snapshot w ON w.destination_id=d.destination_id AND w.forecast_date=t.start_date
 GROUP BY t.trip_id,d.name,d.country,w.temperature,w.weather_code;
+
+-- FUNCTIONS + TRIGGER
 
 CREATE OR REPLACE FUNCTION check_itinerary_conflicts(day_id INT) RETURNS TABLE(item_id INT, conflict_with INT) LANGUAGE sql AS $$
  SELECT a.item_id,b.item_id FROM itinerary_item a JOIN itinerary_item b ON a.itinerary_day_id=b.itinerary_day_id AND a.item_id<b.item_id AND a.start_time<b.end_time AND b.start_time<a.end_time WHERE a.itinerary_day_id=day_id;
