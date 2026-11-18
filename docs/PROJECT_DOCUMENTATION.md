@@ -68,6 +68,4 @@ PostgreSQL is appropriate for related and constrained trip data. pgvector is the
 | Register a new user | a hashed password and database-backed session are created |
 | Create a trip / invitation / preference | the dashboard updates after a successful API transaction |
 
-## Contributions
 
-Member 1 owns data/schema/vector search and database tests. Member 2 owns web screens/routes/itinerary UI and interface tests. Both should make their own commits, including a small database and small application change each.
